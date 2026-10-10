@@ -64,6 +64,10 @@ final class DockVisibilityControllerTests: XCTestCase {
         XCTAssertEqual(sceneOpenRequests, 1)
         controller.registerWorkspaceOpenHandler { newReceived.append($0) }
         XCTAssertEqual(newReceived, [[url]])
+        // The new receiver can be ready before its NSView window bridge attaches.
+        let secondURL = URL(fileURLWithPath: "/tmp/second.md")
+        controller.openURLs([secondURL])
+        XCTAssertEqual(newReceived, [[url], [secondURL]])
     }
 
     func testWindowBridgeTracksContentCloseReopenAndDetach() {
