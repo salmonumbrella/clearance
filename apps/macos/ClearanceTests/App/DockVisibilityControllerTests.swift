@@ -56,9 +56,12 @@ final class DockVisibilityControllerTests: XCTestCase {
             controller.registerWorkspaceOpenHandler { oldReceived.append($0) }
         }
         XCTAssertNil(releasedWindow)
+        var sceneOpenRequests = 0
+        controller.registerWorkspaceSceneOpener { sceneOpenRequests += 1 }
         let url = URL(fileURLWithPath: "/tmp/reopened.md")
         controller.openURLs([url])
         XCTAssertTrue(oldReceived.isEmpty)
+        XCTAssertEqual(sceneOpenRequests, 1)
         controller.registerWorkspaceOpenHandler { newReceived.append($0) }
         XCTAssertEqual(newReceived, [[url]])
     }

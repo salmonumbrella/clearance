@@ -17,6 +17,8 @@ final class DockVisibilityController {
     private var settingsSubscription: AnyCancellable?
     private var documentWindows: Set<ObjectIdentifier> = []
     private weak var workspaceWindow: NSWindow?
+    private var hasRegisteredWorkspaceWindow = false
+    private var workspaceSceneOpener: (() -> Void)?
     private var workspaceOpenHandler: (([URL]) -> Void)?
     private var pendingOpenURLs: [[URL]] = []
     private(set) var hideDockIconWhenNoDocuments = false
@@ -55,11 +57,20 @@ final class DockVisibilityController {
 
     func registerWorkspaceWindow(_ window: NSWindow) {
         workspaceWindow = window
+        hasRegisteredWorkspaceWindow = true
+    }
+
+    func registerWorkspaceSceneOpener(_ opener: @escaping () -> Void) {
+        workspaceSceneOpener = opener
     }
 
     @discardableResult
     func showWorkspace() -> Bool {
-        guard let workspaceWindow else { return false }
+        guard let workspaceWindow else {
+            guard let workspaceSceneOpener else { return false }
+            workspaceSceneOpener()
+            return true
+        }
         if workspaceWindow.isMiniaturized {
             workspaceWindow.deminiaturize(nil)
         }
@@ -70,20 +81,27 @@ final class DockVisibilityController {
 
     func openURLs(_ urls: [URL]) {
         guard !urls.isEmpty else { return }
-        showWorkspace()
-        if let workspaceOpenHandler {
-            workspaceOpenHandler(urls)
-        } else {
-            pendingOpenURLs.append(urls)
+        if hasRegisteredWorkspaceWindow, workspaceWindow == nil {
+            // A released SwiftUI window has a new view model when recreated.
+            workspaceOpenHandler = nil
         }
+        // Queue before opening the scene: onAppear may install its receiver immediately.
+        pendingOpenURLs.append(urls)
+        showWorkspace()
+        deliverPendingOpenURLs()
     }
 
     func registerWorkspaceOpenHandler(_ handler: @escaping ([URL]) -> Void) {
         workspaceOpenHandler = handler
+        deliverPendingOpenURLs()
+    }
+
+    private func deliverPendingOpenURLs() {
+        guard let workspaceOpenHandler else { return }
         let pending = pendingOpenURLs
         pendingOpenURLs.removeAll()
         for urls in pending {
-            handler(urls)
+            workspaceOpenHandler(urls)
         }
     }
 }

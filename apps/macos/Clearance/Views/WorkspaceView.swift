@@ -12,6 +12,7 @@ enum WorkspaceDropPayloadResolver {
 
 struct WorkspaceView: View {
     @Environment(\.openSettings) private var openSettings
+    @Environment(\.openWindow) private var openWindow
     @ObservedObject private var appSettings: AppSettings
     @StateObject private var viewModel: WorkspaceViewModel
     @StateObject private var interactionState = WorkspaceInteractionState()
@@ -228,6 +229,9 @@ struct WorkspaceView: View {
             isWorkspace: true
         ))
         .onAppear {
+            DockVisibilityController.shared.registerWorkspaceSceneOpener {
+                openWindow(id: "main")
+            }
             DockVisibilityController.shared.registerWorkspaceOpenHandler { urls in
                 if let url = urls.first {
                     _ = openDocument(url)
