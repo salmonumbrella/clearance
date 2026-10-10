@@ -1,0 +1,80 @@
+import AppKit
+import XCTest
+@testable import Clearance
+
+@MainActor
+final class DockVisibilityControllerTests: XCTestCase {
+    func testPreferenceAndDocumentWindowsDetermineActivationPolicy() {
+        let suite = UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AppSettings(userDefaults: defaults)
+        var policies: [NSApplication.ActivationPolicy] = []
+        let controller = DockVisibilityController { policies.append($0) }
+        controller.observe(settings)
+        XCTAssertEqual(policies.last, .regular)
+
+        settings.hideDockIconWhenNoDocuments = true
+        XCTAssertEqual(policies.last, .accessory)
+        let main = NSWindow()
+        let popout = NSWindow()
+        controller.setDocumentOpen(true, for: main)
+        XCTAssertEqual(policies.last, .regular)
+        controller.setDocumentOpen(true, for: popout)
+        controller.removeWindow(main)
+        XCTAssertEqual(policies.last, .regular)
+        controller.removeWindow(popout)
+        XCTAssertEqual(policies.last, .accessory)
+        controller.removeWindow(popout)
+        XCTAssertEqual(policies.last, .accessory)
+        settings.hideDockIconWhenNoDocuments = false
+        XCTAssertEqual(policies.last, .regular)
+    }
+
+    func testExternalOpensWaitForWorkspaceAndDeliverOnce() {
+        let controller = DockVisibilityController { _ in }
+        let url = URL(fileURLWithPath: "/tmp/notes.md")
+        var received: [[URL]] = []
+        controller.openURLs([url])
+        controller.registerWorkspaceOpenHandler { received.append($0) }
+        XCTAssertEqual(received, [[url]])
+        controller.registerWorkspaceOpenHandler { received.append($0) }
+        XCTAssertEqual(received, [[url]])
+        controller.openURLs([url])
+        XCTAssertEqual(received, [[url], [url]])
+    }
+
+    func testWindowBridgeTracksContentCloseReopenAndDetach() {
+        let suite = UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AppSettings(userDefaults: defaults)
+        settings.hideDockIconWhenNoDocuments = true
+        var policies: [NSApplication.ActivationPolicy] = []
+        let controller = DockVisibilityController { policies.append($0) }
+        controller.observe(settings)
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 200, height: 100),
+                              styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        let observer = DockDocumentWindowObserver(controller: controller)
+        window.contentView = observer
+        XCTAssertEqual(policies.last, .accessory)
+        observer.hasDocument = true
+        XCTAssertEqual(policies.last, .regular)
+        // Visibility changes do not discard an open document.
+        window.orderOut(nil)
+        XCTAssertEqual(policies.last, .regular)
+        observer.hasDocument = false
+        XCTAssertEqual(policies.last, .accessory)
+        observer.hasDocument = true
+        window.close()
+        XCTAssertEqual(policies.last, .accessory)
+        // SwiftUI may update a retained closed view; it must stay unregistered.
+        observer.hasDocument = true
+        XCTAssertEqual(policies.last, .accessory)
+        NotificationCenter.default.post(name: NSWindow.didBecomeKeyNotification, object: window)
+        XCTAssertEqual(policies.last, .regular)
+        window.contentView = nil
+        XCTAssertEqual(policies.last, .accessory)
+    }
+}
