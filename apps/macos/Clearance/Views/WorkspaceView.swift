@@ -207,7 +207,7 @@ struct WorkspaceView: View {
                 }
             }
 
-            if appSettings.hideDockIconWhenNoDocuments && !viewModel.hasDockDocument {
+            if false && appSettings.hideDockIconWhenNoDocuments && !viewModel.hasDockDocument {
                 ToolbarItem(id: "clearance.appActions", placement: .primaryAction) {
                     Menu {
                         Button("New…") { createNewDocument() }
