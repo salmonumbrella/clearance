@@ -56,12 +56,16 @@ final class DockVisibilityControllerTests: XCTestCase {
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 200, height: 100),
                               styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
-        let observer = DockDocumentWindowObserver(controller: controller)
+        let observer = DockDocumentWindowObserver(controller: controller, isWorkspace: true)
         window.contentView = observer
         XCTAssertEqual(policies.last, .accessory)
         observer.hasDocument = true
         XCTAssertEqual(policies.last, .regular)
         // Visibility changes do not discard an open document.
+        window.makeKeyAndOrderFront(nil)
+        window.miniaturize(nil)
+        XCTAssertEqual(policies.last, .regular)
+        window.deminiaturize(nil)
         window.orderOut(nil)
         XCTAssertEqual(policies.last, .regular)
         observer.hasDocument = false
@@ -72,7 +76,8 @@ final class DockVisibilityControllerTests: XCTestCase {
         // SwiftUI may update a retained closed view; it must stay unregistered.
         observer.hasDocument = true
         XCTAssertEqual(policies.last, .accessory)
-        NotificationCenter.default.post(name: NSWindow.didBecomeKeyNotification, object: window)
+        XCTAssertTrue(controller.showWorkspace())
+        XCTAssertTrue(window.isVisible)
         XCTAssertEqual(policies.last, .regular)
         window.contentView = nil
         XCTAssertEqual(policies.last, .accessory)
