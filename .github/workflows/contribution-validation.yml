@@ -1,0 +1,28 @@
+name: macOS contribution validation
+on:
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: Exact commit to validate
+        required: true
+      tests:
+        description: XCTest selection (all or dock)
+        default: all
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.revision }}
+      - run: brew install xcodegen
+      - run: xcodegen generate --spec apps/macos/project.yml --project apps/macos
+      - name: XCTest
+        run: |
+          extra=()
+          if [ '${{ inputs.tests }}' = dock ]; then
+            extra=(-only-testing:ClearanceTests/AppSettingsTests -only-testing:ClearanceTests/DockVisibilityControllerTests)
+          fi
+          xcodebuild test -project apps/macos/Clearance.xcodeproj -scheme Clearance -destination 'platform=macOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO "${extra[@]}"
