@@ -37,6 +37,8 @@ final class WorkspaceToolbarTests: XCTestCase {
             styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false
         )
         window.isReleasedWhenClosed = false
+        // Match ClearanceApp's scene and flush AppKit display work in this unit-test host.
+        window.toolbarStyle = .unified
         defer {
             window.close()
             defaults.removePersistentDomain(forName: suite)
@@ -57,10 +59,12 @@ final class WorkspaceToolbarTests: XCTestCase {
         settings.hideDockIconWhenNoDocuments = true
         for _ in 0..<20 where appActionsItem()?.isVisible != true {
             pumpMainRunLoop()
+            window.displayIfNeeded()
+            NSApplication.shared.updateWindows()
         }
         XCTAssertNotNil(appActionsItem(), "Idle accessory workspace needs visible recovery actions")
         XCTAssertEqual(appActionsItem()?.isVisible, true,
-                       "Toolbar visible items: \(toolbar.visibleItems?.map { $0.itemIdentifier.rawValue } ?? []); current toolbar: \(window.toolbar === toolbar)")
+                       "Toolbar visible items: \(toolbar.visibleItems?.map { $0.itemIdentifier.rawValue } ?? []); current toolbar: \(window.toolbar === toolbar); toolbar visible: \(toolbar.isVisible); window visible: \(window.isVisible)")
 
         DockVisibilityController.shared.openURLs([fileURL])
         pumpMainRunLoop()
