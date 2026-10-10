@@ -44,6 +44,25 @@ final class DockVisibilityControllerTests: XCTestCase {
         XCTAssertEqual(received, [[url], [url]])
     }
 
+    func testExternalOpenAfterWorkspaceDeallocationWaitsForNewReceiver() {
+        let controller = DockVisibilityController { _ in }
+        var oldReceived: [[URL]] = []
+        var newReceived: [[URL]] = []
+        weak var releasedWindow: NSWindow?
+        autoreleasepool {
+            let window = NSWindow()
+            releasedWindow = window
+            controller.registerWorkspaceWindow(window)
+            controller.registerWorkspaceOpenHandler { oldReceived.append($0) }
+        }
+        XCTAssertNil(releasedWindow)
+        let url = URL(fileURLWithPath: "/tmp/reopened.md")
+        controller.openURLs([url])
+        XCTAssertTrue(oldReceived.isEmpty)
+        controller.registerWorkspaceOpenHandler { newReceived.append($0) }
+        XCTAssertEqual(newReceived, [[url]])
+    }
+
     func testWindowBridgeTracksContentCloseReopenAndDetach() {
         let suite = UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
