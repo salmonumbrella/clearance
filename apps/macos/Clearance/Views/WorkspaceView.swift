@@ -11,6 +11,8 @@ enum WorkspaceDropPayloadResolver {
 }
 
 struct WorkspaceView: View {
+    @Environment(\.openSettings) private var openSettings
+    @Environment(\.openWindow) private var openWindow
     @ObservedObject private var appSettings: AppSettings
     @StateObject private var viewModel: WorkspaceViewModel
     @StateObject private var interactionState = WorkspaceInteractionState()
@@ -205,6 +207,20 @@ struct WorkspaceView: View {
                 }
             }
 
+            if appSettings.hideDockIconWhenNoDocuments && !viewModel.hasDockDocument {
+                ToolbarItem(id: "clearance.appActions", placement: .primaryAction) {
+                    Menu {
+                        Button("New…") { createNewDocument() }
+                        Button("Settings…") { openSettings() }
+                        Divider()
+                        Button("Quit Clearance") { NSApp.terminate(nil) }
+                    } label: {
+                        Label("App Actions", systemImage: "gearshape")
+                    }
+                    .help("New, Settings, and Quit while the app menu is hidden")
+                }
+            }
+
             ToolbarItem(id: "clearance.outline", placement: .primaryAction) {
                 if canShowOutlineControls {
                     Button {
@@ -214,6 +230,20 @@ struct WorkspaceView: View {
                     }
                     .toolbarDebugFrame(enabled: showToolbarLayoutDebug, color: .purple)
                     .help(isOutlineVisible ? "Hide Outline" : "Show Outline")
+                }
+            }
+        }
+        .background(DockDocumentWindowRegistration(
+            hasDocument: viewModel.hasDockDocument,
+            isWorkspace: true
+        ))
+        .onAppear {
+            DockVisibilityController.shared.registerWorkspaceSceneOpener {
+                openWindow(id: "main")
+            }
+            DockVisibilityController.shared.registerWorkspaceOpenHandler { urls in
+                if let url = urls.first {
+                    _ = openDocument(url)
                 }
             }
         }
