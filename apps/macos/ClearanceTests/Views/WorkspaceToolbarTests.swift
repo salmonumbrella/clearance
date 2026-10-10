@@ -55,9 +55,12 @@ final class WorkspaceToolbarTests: XCTestCase {
 
         XCTAssertNil(appActionsItem(), "Default-off setting must not add idle actions")
         settings.hideDockIconWhenNoDocuments = true
-        pumpMainRunLoop()
+        for _ in 0..<20 where appActionsItem()?.isVisible != true {
+            pumpMainRunLoop()
+        }
         XCTAssertNotNil(appActionsItem(), "Idle accessory workspace needs visible recovery actions")
-        XCTAssertEqual(appActionsItem()?.isVisible, true)
+        XCTAssertEqual(appActionsItem()?.isVisible, true,
+                       "Toolbar visible items: \(toolbar.visibleItems?.map { $0.itemIdentifier.rawValue } ?? []); current toolbar: \(window.toolbar === toolbar)")
 
         DockVisibilityController.shared.openURLs([fileURL])
         pumpMainRunLoop()
