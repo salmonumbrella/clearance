@@ -217,6 +217,7 @@ struct WorkspaceView: View {
                     } label: {
                         Label("App Actions", systemImage: "gearshape")
                     }
+                    .labelStyle(.iconOnly)
                     .help("New, Settings, and Quit while the app menu is hidden")
                 }
             }
@@ -781,7 +782,7 @@ private struct WindowToolbarPriorityConfigurator: NSViewRepresentable {
 
         for item in toolbar.items {
             switch item.itemIdentifier.rawValue {
-            case "clearance.back", "clearance.forward", "clearance.mode", "clearance.outline":
+            case "clearance.back", "clearance.forward", "clearance.mode", "clearance.outline", "clearance.appActions":
                 item.visibilityPriority = .high
             case "clearance.address":
                 item.visibilityPriority = .standard

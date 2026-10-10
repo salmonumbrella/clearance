@@ -46,6 +46,7 @@ final class WorkspaceToolbarTests: XCTestCase {
         }
         window.contentViewController = NSHostingController(rootView: WorkspaceView(appSettings: settings))
         window.makeKeyAndOrderFront(nil)
+        window.setContentSize(NSSize(width: 900, height: 700))
         pumpMainRunLoop()
         guard let toolbar = window.toolbar else {
             XCTFail("Expected workspace toolbar")
